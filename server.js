@@ -12,12 +12,13 @@ const os = require('os');
 const path = require('path');
 const axios = require('axios');
 
-const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
-const LINKEDIN_USERNAME = process.env.LINKEDIN_USERNAME;
-const LINKEDIN_PASSWORD = process.env.LINKEDIN_PASSWORD;
-const SERPER_API_KEY = process.env.SERPER_API_KEY;
+// const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
+// const LINKEDIN_USERNAME = process.env.LINKEDIN_USERNAME;
+// const LINKEDIN_PASSWORD = process.env.LINKEDIN_PASSWORD;
+// const SERPER_API_KEY = process.env.SERPER_API_KEY;
 
-const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
+// const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
+
 
 const app = express();
 app.use(express.json());
@@ -32,10 +33,84 @@ const rl = readline.createInterface({
 function prompt(question) {
     return new Promise(resolve => {
         rl.question(question, answer => {
-            resolve(answer);
+            resolve(answer.trim());
         });
     });
 }
+
+let GEMINI_API_KEY = process.env.GEMINI_API_KEY;
+let LINKEDIN_USERNAME = process.env.LINKEDIN_USERNAME;
+let LINKEDIN_PASSWORD = process.env.LINKEDIN_PASSWORD;
+let SERPER_API_KEY = process.env.SERPER_API_KEY;
+
+// Track if env vars are set
+let envReady = !!(GEMINI_API_KEY && LINKEDIN_USERNAME && LINKEDIN_PASSWORD && SERPER_API_KEY);
+
+// Serve env setup page if not ready
+app.get('/env', (req, res) => {
+    res.send(`
+        <!DOCTYPE html>
+        <html lang="en">
+        <head>
+            <!-- ...existing code... -->
+        </head>
+        <body>
+            <div class="env-container">
+                <h2>Provide Required API Keys & Credentials</h2>
+                <div class="help">
+                    <b>Instructions:</b>
+                    <ul>
+                        <li><b>GEMINI_API_KEY</b>: <a href="https://aistudio.google.com/app/apikey" target="_blank">Get from Google AI Studio</a></li>
+                        <li><b>SERPER_API_KEY</b>: <a href="https://serper.dev" target="_blank">Sign up at serper.dev</a></li>
+                        <li><b>LINKEDIN_USERNAME</b> & <b>LINKEDIN_PASSWORD</b>: Your LinkedIn login credentials</li>
+                    </ul>
+                    <div>After submitting, you will be redirected to the application.</div>
+                </div>
+                <form method="POST" action="/env${req.query.redirect ? '?redirect=1' : ''}">
+                    <label for="GEMINI_API_KEY">GEMINI_API_KEY</label>
+                    <input type="text" id="GEMINI_API_KEY" name="GEMINI_API_KEY" required autocomplete="off" />
+                    <label for="SERPER_API_KEY">SERPER_API_KEY</label>
+                    <input type="text" id="SERPER_API_KEY" name="SERPER_API_KEY" required autocomplete="off" />
+                    <label for="LINKEDIN_USERNAME">LINKEDIN_USERNAME</label>
+                    <input type="text" id="LINKEDIN_USERNAME" name="LINKEDIN_USERNAME" required autocomplete="off" />
+                    <label for="LINKEDIN_PASSWORD">LINKEDIN_PASSWORD</label>
+                    <input type="password" id="LINKEDIN_PASSWORD" name="LINKEDIN_PASSWORD" required autocomplete="off" />
+                    <button type="submit">Save & Continue</button>
+                </form>
+            </div>
+        </body>
+        </html>
+    `);
+});
+
+app.post('/env', express.urlencoded({ extended: true }), (req, res) => {
+    GEMINI_API_KEY = req.body.GEMINI_API_KEY?.trim();
+    SERPER_API_KEY = req.body.SERPER_API_KEY?.trim();
+    LINKEDIN_USERNAME = req.body.LINKEDIN_USERNAME?.trim();
+    LINKEDIN_PASSWORD = req.body.LINKEDIN_PASSWORD?.trim();
+    envReady = !!(GEMINI_API_KEY && LINKEDIN_USERNAME && LINKEDIN_PASSWORD && SERPER_API_KEY);
+    if (!envReady) {
+        return res.send('<div style="color:red;padding:2em;">All fields are required. <a href="/env">Go back</a></div>');
+    }
+    // Optionally, set process.env for child processes
+    process.env.GEMINI_API_KEY = GEMINI_API_KEY;
+    process.env.SERPER_API_KEY = SERPER_API_KEY;
+    process.env.LINKEDIN_USERNAME = LINKEDIN_USERNAME;
+    process.env.LINKEDIN_PASSWORD = LINKEDIN_PASSWORD;
+    // Redirect to main UI if ?redirect=1, else to /
+    if (req.query.redirect) {
+        return res.redirect('/ui.html');
+    }
+    res.redirect('/');
+});
+
+// Middleware to block access if env not ready
+app.use((req, res, next) => {
+    if (!envReady && req.path !== '/env' && req.method !== 'POST') {
+        return res.redirect('/env');
+    }
+    next();
+});
 
 async function linkedinLogin(page, username, password) {
     try {
@@ -359,19 +434,16 @@ app.get('/profiles', (req, res) => {
 });
 
 async function main() {
-    if (!GEMINI_API_KEY) {
-        console.log("Missing GEMINI_API_KEY in .env");
-        return;
-    }
-    if (!LINKEDIN_USERNAME || !LINKEDIN_PASSWORD) {
-        console.log("Missing LINKEDIN_USERNAME or LINKEDIN_PASSWORD in .env");
-        return;
-    }
     try {
+        // await ensureEnvVars(); // No longer prompt in CLI
+        if (envReady) {
+            genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
+        }
         const port = process.env.PORT || 3000;
-        app.listen(port, () => console.log(`Access Here:http://localhost:${port}/ui.html`));
+        app.listen(port, () => console.log(`Access Here: http://localhost:${port}/ui.html`));
     } catch (error) {
         console.error("Error:", error.message);
+        process.exit(1);
     }
 }
 

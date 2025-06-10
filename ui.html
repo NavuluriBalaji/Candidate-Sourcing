@@ -1033,6 +1033,49 @@
       }
     `;
     document.head.appendChild(srOnly);
+
+    // ENV VAR POPUP CHECK
+    (async function checkEnvVars() {
+      try {
+        // Try to fetch /profiles, which will redirect to /env if env not set
+        const res = await fetch('/profiles', { redirect: 'manual' });
+        if (res.type === 'opaqueredirect' || (res.status >= 300 && res.status < 400)) {
+          showEnvPopup();
+        }
+      } catch (e) {
+        // Network error, ignore
+      }
+    })();
+
+    function showEnvPopup() {
+      const popup = document.createElement('div');
+      popup.innerHTML = `
+        <div style="
+          position:fixed;z-index:9999;inset:0;background:rgba(0,0,0,0.45);display:flex;align-items:center;justify-content:center;">
+          <div style="
+            background:#fff;max-width:420px;width:90%;border-radius:14px;box-shadow:0 8px 32px #0003;padding:2.5rem 2rem 2rem 2rem;display:flex;flex-direction:column;align-items:center;">
+            <h2 style="color:#2563eb;font-size:1.3rem;font-weight:700;margin-bottom:0.7em;text-align:center;">Setup Required</h2>
+            <div style="color:#374151;font-size:1.05rem;margin-bottom:1.2em;text-align:center;">
+              Please provide your API keys and LinkedIn credentials to use this application.<br>
+              <ul style="text-align:left;margin:1em 0 0 1.2em;padding:0;">
+                <li><b>GEMINI_API_KEY</b>: <a href="https://aistudio.google.com/app/apikey" target="_blank">Google AI Studio</a></li>
+                <li><b>SERPER_API_KEY</b>: <a href="https://serper.dev" target="_blank">serper.dev</a></li>
+                <li><b>LINKEDIN_USERNAME</b> & <b>LINKEDIN_PASSWORD</b>: Your LinkedIn login</li>
+              </ul>
+            </div>
+            <button id="envPopupBtn" style="background:#2563eb;color:#fff;font-weight:600;border:none;border-radius:8px;padding:0.8rem 0;width:100%;font-size:1rem;cursor:pointer;">
+              Enter Keys & Credentials
+            </button>
+          </div>
+        </div>
+      `;
+      document.body.appendChild(popup);
+      document.getElementById('envPopupBtn').onclick = function() {
+        window.location.href = '/env?redirect=1';
+      };
+      // Prevent interaction with background
+      document.body.style.overflow = 'hidden';
+    }
   </script>
 </body>
 </html>
