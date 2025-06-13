@@ -97,6 +97,8 @@ app.post('/env', express.urlencoded({ extended: true }), (req, res) => {
     process.env.SERPER_API_KEY = SERPER_API_KEY;
     process.env.LINKEDIN_USERNAME = LINKEDIN_USERNAME;
     process.env.LINKEDIN_PASSWORD = LINKEDIN_PASSWORD;
+    // Ensure genAI is re-initialized with the new key
+    initializeGenAI();
     // Redirect to main UI if ?redirect=1, else to /
     if (req.query.redirect) {
         return res.redirect('/ui.html');
@@ -104,7 +106,6 @@ app.post('/env', express.urlencoded({ extended: true }), (req, res) => {
     res.redirect('/');
 });
 
-// Middleware to block access if env not ready
 app.use((req, res, next) => {
     if (!envReady && req.path !== '/env' && req.method !== 'POST') {
         return res.redirect('/env');
@@ -125,17 +126,54 @@ async function linkedinLogin(page, username, password) {
     }
 }
 
+async function sendSampleMessageIfNeededOnLoadedPage(page, profileUrl, userName) {
+    if (messagedUsers.has(profileUrl)) return;
+    try {
+        // Wait for the specific Message button and click it
+        const messageBtnSelector = 'button.artdeco-button.artdeco-button--2.artdeco-button--secondary.ember-view.yaEkeqYillgKqlLSUKpoFNDXvyMieMyCNmpc';
+        await page.waitForSelector(messageBtnSelector, { timeout: 15000 });
+        await page.click(messageBtnSelector);
+        await page.waitForSelector('div.msg-form__contenteditable', { timeout: 10000 });
+        const sampleMessage = `Hi${userName ? ' ' + userName : ''}\nHow are you?`;
+        await page.type('div.msg-form__contenteditable', sampleMessage);
+        await page.keyboard.press('Enter');
+        messagedUsers.add(profileUrl);
+        await new Promise(resolve => setTimeout(resolve, 1000));
+    } catch (e) {
+        // If message button is not available, set error for premium requirement
+        if (e.message && e.message.includes('waiting for selector')) {
+            throw new Error('You need a premium account to send messages to this user.');
+        }
+        // Ignore other errors
+    }
+}
+
 async function scrapeProfileWithGemini(page, url) {
     try {
-        await page.setDefaultNavigationTimeout(120000); // Increase navigation timeout to 120s
-        await page.goto(url, { waitUntil: 'networkidle2', timeout: 120000 });
+        // Lower navigation timeout and retry attempts
+        await page.setDefaultNavigationTimeout(60000);
+        let loaded = false, attempts = 0, maxAttempts = 2;
+        let lastError = null;
+        while (!loaded && attempts < maxAttempts) {
+            try {
+                await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 60000 });
+                loaded = true;
+            } catch (err) {
+                lastError = err;
+                attempts++;
+                if (attempts < maxAttempts) {
+                    await new Promise(res => setTimeout(res, 1000));
+                }
+            }
+        }
+        if (!loaded) throw lastError || new Error('Failed to load profile page');
         try {
-            await page.waitForSelector('main.scaffold-layout__main, h1.text-heading-xlarge, body', { timeout: 20000 });
+            await page.waitForSelector('main.scaffold-layout__main, h1.text-heading-xlarge, body', { timeout: 8000 });
         } catch (e) {
-            await page.waitForSelector('body', { timeout: 10000 });
+            await page.waitForSelector('body', { timeout: 4000 });
         }
         await page.evaluate(() => { window.scrollTo(0, document.body.scrollHeight); });
-        await new Promise(resolve => setTimeout(resolve, 3000));
+        await new Promise(resolve => setTimeout(resolve, 500));
         const htmlContent = await page.content();
         const prompt = `
         You are an expert data extractor. Based on the following HTML from a LinkedIn profile,
@@ -150,7 +188,7 @@ async function scrapeProfileWithGemini(page, url) {
           "headline": "Professional headline",
           "location": "City, State, Country",
           "about": "The full text from the 'About' section. If missing, use an empty string.",
-          "email": "The person's email address. If not found, use an empty string.",
+          "email": "The person's email  . If not found, use an empty string.",
           "experience": [
             {
               "role": "Job Title",
@@ -179,8 +217,12 @@ async function scrapeProfileWithGemini(page, url) {
         } else {
             data.experience = '';
         }
+        // Send message after scraping, using the scraped name
+        await sendSampleMessageIfNeededOnLoadedPage(page, url, data.name);
         return data;
     } catch (error) {
+        // Optionally log error for debugging
+        console.error(`Error scraping profile ${url}:`, error.message);
         return { error: error.message };
     }
 }
@@ -219,15 +261,103 @@ async function scrapeProfilesFromCSV(csvPath, username, password) {
                 });
                 try {
                     const page = await browser.newPage();
-                    await page.setDefaultNavigationTimeout(120000); // Set navigation timeout to 120s
+                    await page.setDefaultNavigationTimeout(120000);
                     await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36');
                     await linkedinLogin(page, username, password);
                     for (const profile of profiles) {
-                        const data = await scrapeProfileWithGemini(page, profile.profileurl);
-                        data.sno = profile.sno;
-                        data.url = profile.profileurl;
-                        results.push(data);
-                        await new Promise(resolve => setTimeout(resolve, 2000)); // Replace page.waitForTimeout
+                        // Load the profile page
+                        let loaded = false, attempts = 0, maxAttempts = 2, lastError = null;
+                        while (!loaded && attempts < maxAttempts) {
+                            try {
+                                await page.goto(profile.profileurl, { waitUntil: 'domcontentloaded', timeout: 60000 });
+                                loaded = true;
+                            } catch (err) {
+                                lastError = err;
+                                attempts++;
+                                if (attempts < maxAttempts) {
+                                    await new Promise(res => setTimeout(res, 1000));
+                                }
+                            }
+                        }
+                        if (!loaded) {
+                            results.push({
+                                error: lastError ? lastError.message : 'Failed to load profile page',
+                                sno: profile.sno,
+                                url: profile.profileurl
+                            });
+                            continue;
+                        }
+                        // Scrape the profile
+                        let scrapedData = {};
+                        try {
+                            await page.waitForSelector('main.scaffold-layout__main, h1.text-heading-xlarge, body', { timeout: 8000 });
+                        } catch (e) {
+                            await page.waitForSelector('body', { timeout: 4000 });
+                        }
+                        await page.evaluate(() => { window.scrollTo(0, document.body.scrollHeight); });
+                        await new Promise(resolve => setTimeout(resolve, 500));
+                        const htmlContent = await page.content();
+                        const prompt = `
+                        You are an expert data extractor. Based on the following HTML from a LinkedIn profile,
+                        extract the specified information.
+
+                        Return ONLY a single valid JSON object with the following structure and nothing else.
+                        Do not include \`\`\`json at the beginning or \`\`\` at the end.
+
+                        JSON structure to follow:
+                        {
+                          "name": "Full Name",
+                          "headline": "Professional headline",
+                          "location": "City, State, Country",
+                          "about": "The full text from the 'About' section. If missing, use an empty string.",
+                          "email": "The person's email  . If not found, use an empty string.",
+                          "experience": [
+                            {
+                              "role": "Job Title",
+                              "company": "Company Name",
+                              "duration": "Dates of employment, e.g., 'Jan 2022 - Present'"
+                            }
+                          ]
+                        }
+
+                        Here is the HTML content:
+                        <html>
+                        ${htmlContent}
+                        </html>
+                        `;
+                        try {
+                            const model = genAI.getGenerativeModel({
+                                model: "gemini-2.0-flash",
+                                generationConfig: { responseMimeType: "application/json" }
+                            });
+                            const result = await model.generateContent(prompt);
+                            const response = await result.response;
+                            scrapedData = JSON.parse(response.text());
+                            if (scrapedData.experience && Array.isArray(scrapedData.experience) && scrapedData.experience.length > 0) {
+                                scrapedData.experience = scrapedData.experience
+                                    .map(job => `${job.role || ''} at ${job.company || ''}`)
+                                    .join('; ');
+                            } else {
+                                scrapedData.experience = '';
+                            }
+                        } catch (err) {
+                            results.push({
+                                error: err.message,
+                                sno: profile.sno,
+                                url: profile.profileurl
+                            });
+                            continue;
+                        }
+                        // Send message after scraping, using the scraped name
+                        try {
+                            await sendSampleMessageIfNeededOnLoadedPage(page, profile.profileurl, scrapedData.name);
+                        } catch (e) {
+                            scrapedData.message_error = e.message;
+                        }
+                        scrapedData.sno = profile.sno;
+                        scrapedData.url = profile.profileurl;
+                        results.push(scrapedData);
+                        await new Promise(resolve => setTimeout(resolve, 1000));
                     }
                     const csvWriter = createCsvWriter({
                         path: 'profile_details_gemini_cleaned.csv',
@@ -433,12 +563,46 @@ app.get('/profiles', (req, res) => {
     res.json(lastScrapedProfiles);
 });
 
+// Make sure genAI is initialized only after envReady is true and GEMINI_API_KEY is set
+let genAI = null;
+
+function initializeGenAI() {
+    if (envReady && GEMINI_API_KEY && !genAI) {
+        genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
+    }
+}
+
+// Call this after env vars are set or updated
+app.post('/env', express.urlencoded({ extended: true }), (req, res) => {
+    GEMINI_API_KEY = req.body.GEMINI_API_KEY?.trim();
+    SERPER_API_KEY = req.body.SERPER_API_KEY?.trim();
+    LINKEDIN_USERNAME = req.body.LINKEDIN_USERNAME?.trim();
+    LINKEDIN_PASSWORD = req.body.LINKEDIN_PASSWORD?.trim();
+    envReady = !!(GEMINI_API_KEY && LINKEDIN_USERNAME && LINKEDIN_PASSWORD && SERPER_API_KEY);
+    if (!envReady) {
+        return res.send('<div style="color:red;padding:2em;">All fields are required. <a href="/env">Go back</a></div>');
+    }
+    // Optionally, set process.env for child processes
+    process.env.GEMINI_API_KEY = GEMINI_API_KEY;
+    process.env.SERPER_API_KEY = SERPER_API_KEY;
+    process.env.LINKEDIN_USERNAME = LINKEDIN_USERNAME;
+    process.env.LINKEDIN_PASSWORD = LINKEDIN_PASSWORD;
+    initializeGenAI(); // <-- Ensure genAI is re-initialized with the new key
+    // Redirect to main UI if ?redirect=1, else to /
+    if (req.query.redirect) {
+        return res.redirect('/ui.html');
+    }
+    res.redirect('/');
+});
+
+// Also call initializeGenAI on startup if envReady
+if (envReady) {
+    initializeGenAI();
+}
+
 async function main() {
     try {
         // await ensureEnvVars(); // No longer prompt in CLI
-        if (envReady) {
-            genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
-        }
         const port = process.env.PORT || 3000;
         app.listen(port, () => console.log(`Access Here: http://localhost:${port}/ui.html`));
     } catch (error) {
@@ -457,3 +621,10 @@ module.exports = {
 if (require.main === module) {
     main();
 }
+
+const messagedUsers = new Set();
+if (envReady && !genAI) {
+    genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
+}
+    main();
+

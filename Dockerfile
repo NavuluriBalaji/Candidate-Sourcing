@@ -1,4 +1,4 @@
-FROM node:20
+FROM node:18
 
 # Install dependencies for Puppeteer
 RUN apt-get update && \
@@ -7,14 +7,23 @@ RUN apt-get update && \
     xdg-utils --no-install-recommends && \
     rm -rf /var/lib/apt/lists/*
 
+# Set working directory
 WORKDIR /app
+
+# Copy package files and install dependencies
+COPY package*.json ./
+RUN npm install
+
+# Copy all source code
 COPY . .
 
-RUN npm install
+# Expose the default port
+EXPOSE 3000
 
 # Puppeteer will use Chromium bundled with it
 ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=false
 
 ENV NODE_ENV=production
 
+# Start the server
 CMD ["npm", "start"]
