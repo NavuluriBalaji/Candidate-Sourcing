@@ -1,0 +1,1081 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LinkedIn Profile Scraper - Professional Data Extraction Tool</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --primary-600: #2563eb;
+      --primary-700: #1d4ed8;
+      --primary-50: #eff6ff;
+      --primary-100: #dbeafe;
+      --gray-50: #f9fafb;
+      --gray-100: #f3f4f6;
+      --gray-200: #e5e7eb;
+      --gray-300: #d1d5db;
+      --gray-400: #9ca3af;
+      --gray-500: #6b7280;
+      --gray-600: #4b5563;
+      --gray-700: #374151;
+      --gray-800: #1f2937;
+      --gray-900: #111827;
+      --green-50: #f0fdf4;
+      --green-500: #22c55e;
+      --green-600: #16a34a;
+      --red-50: #fef2f2;
+      --red-500: #ef4444;
+      --red-600: #dc2626;
+      --white: #ffffff;
+      --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+      --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+      --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+      --transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      line-height: 1.6;
+      color: var(--gray-800);
+      background: linear-gradient(135deg, var(--gray-50) 0%, var(--primary-50) 100%);
+      min-height: 100vh;
+    }
+
+    /* Header */
+    .header {
+      background: linear-gradient(135deg, var(--primary-600) 0%, var(--primary-700) 100%);
+      color: var(--white);
+      padding: 1.5rem 0;
+      box-shadow: var(--shadow-lg);
+      position: sticky;
+      top: 0;
+      z-index: 50;
+    }
+
+    .header-content {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 0 1.5rem;
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+
+    .logo-icon {
+      width: 2rem;
+      height: 2rem;
+      background: var(--white);
+      border-radius: 0.5rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--primary-600);
+    }
+
+    .header h1 {
+      font-size: 1.5rem;
+      font-weight: 700;
+      letter-spacing: -0.025em;
+    }
+
+    /* Main Container */
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 2rem 1.5rem;
+    }
+
+    /* Instructions Section */
+    .instructions {
+      background: var(--primary-50);
+      border: 1px solid var(--primary-100);
+      border-radius: 1rem;
+      padding: 2rem;
+      margin-bottom: 3rem;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .instructions::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 4px;
+      background: linear-gradient(90deg, var(--primary-600), var(--primary-700));
+    }
+
+    .instructions h2 {
+      color: var(--primary-700);
+      font-size: 1.25rem;
+      font-weight: 600;
+      margin-bottom: 1rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .step-list {
+      list-style: none;
+      display: grid;
+      gap: 1rem;
+    }
+
+    .step-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 1rem;
+      padding: 1rem;
+      background: var(--white);
+      border-radius: 0.75rem;
+      box-shadow: var(--shadow-sm);
+      transition: var(--transition);
+    }
+
+    .step-item:hover {
+      transform: translateY(-1px);
+      box-shadow: var(--shadow-md);
+    }
+
+    .step-number {
+      background: var(--primary-600);
+      color: var(--white);
+      width: 2rem;
+      height: 2rem;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 600;
+      font-size: 0.875rem;
+      flex-shrink: 0;
+    }
+
+    .step-content {
+      color: var(--gray-700);
+      font-weight: 500;
+    }
+
+    /* Main Grid */
+    .main-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 3rem;
+      align-items: start;
+    }
+
+    @media (max-width: 968px) {
+      .main-grid {
+        grid-template-columns: 1fr;
+        gap: 2rem;
+      }
+    }
+
+    /* Section Styling */
+    .section {
+      background: var(--white);
+      border-radius: 1rem;
+      overflow: hidden;
+      box-shadow: var(--shadow-md);
+      transition: var(--transition);
+    }
+
+    .section:hover {
+      box-shadow: var(--shadow-lg);
+    }
+
+    .section-header {
+      padding: 1.5rem 2rem;
+      background: linear-gradient(135deg, var(--gray-50) 0%, var(--gray-100) 100%);
+      border-bottom: 1px solid var(--gray-200);
+    }
+
+    .section-title {
+      font-size: 1.25rem;
+      font-weight: 600;
+      color: var(--gray-800);
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .section-content {
+      padding: 2rem;
+    }
+
+    /* Form Styling */
+    .form-grid {
+      display: grid;
+      gap: 1.5rem;
+    }
+
+    .form-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1rem;
+    }
+
+    @media (max-width: 640px) {
+      .form-row {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+
+    .form-label {
+      font-weight: 500;
+      color: var(--gray-700);
+      font-size: 0.875rem;
+      letter-spacing: 0.025em;
+    }
+
+    .form-input {
+      padding: 0.75rem 1rem;
+      border: 1px solid var(--gray-300);
+      border-radius: 0.5rem;
+      font-size: 0.875rem;
+      transition: var(--transition);
+      background: var(--white);
+    }
+
+    .form-input:focus {
+      outline: none;
+      border-color: var(--primary-600);
+      box-shadow: 0 0 0 3px rgb(37 99 235 / 0.1);
+    }
+
+    .form-input:hover {
+      border-color: var(--gray-400);
+    }
+
+    /* Button Styling */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      padding: 0.875rem 1.5rem;
+      font-weight: 600;
+      font-size: 0.875rem;
+      border-radius: 0.5rem;
+      border: none;
+      cursor: pointer;
+      transition: var(--transition);
+      text-decoration: none;
+      letter-spacing: 0.025em;
+    }
+
+    .btn-primary {
+      background: var(--primary-600);
+      color: var(--white);
+    }
+
+    .btn-primary:hover:not(:disabled) {
+      background: var(--primary-700);
+      transform: translateY(-1px);
+      box-shadow: var(--shadow-md);
+    }
+
+    .btn-success {
+      background: var(--green-600);
+      color: var(--white);
+    }
+
+    .btn-success:hover:not(:disabled) {
+      background: var(--green-500);
+      transform: translateY(-1px);
+      box-shadow: var(--shadow-md);
+    }
+
+    .btn:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+      transform: none !important;
+    }
+
+    .btn-full {
+      width: 100%;
+    }
+
+    /* File Upload */
+    .file-upload {
+      position: relative;
+      display: block;
+      width: 100%;
+      padding: 1rem;
+      border: 2px dashed var(--gray-300);
+      border-radius: 0.75rem;
+      text-align: center;
+      cursor: pointer;
+      transition: var(--transition);
+      background: var(--gray-50);
+    }
+
+    .file-upload:hover {
+      border-color: var(--primary-600);
+      background: var(--primary-50);
+    }
+
+    .file-upload input {
+      position: absolute;
+      inset: 0;
+      opacity: 0;
+      cursor: pointer;
+    }
+
+    .file-upload-content {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.5rem;
+      color: var(--gray-600);
+    }
+
+    /* Status Messages */
+    .status-message {
+      padding: 1rem 1.5rem;
+      border-radius: 0.75rem;
+      font-weight: 500;
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      margin-bottom: 1.5rem;
+      animation: slideIn 0.3s ease-out;
+    }
+
+    .status-success {
+      background: var(--green-50);
+      color: var(--green-600);
+      border: 1px solid var(--green-500);
+    }
+
+    .status-error {
+      background: var(--red-50);
+      color: var(--red-600);
+      border: 1px solid var(--red-500);
+    }
+
+    .status-info {
+      background: var(--primary-50);
+      color: var(--primary-600);
+      border: 1px solid var(--primary-500);
+    }
+
+    /* Results Table */
+    .results-container {
+      background: var(--white);
+      border-radius: 1rem;
+      overflow: hidden;
+      box-shadow: var(--shadow-md);
+      margin-top: 2rem;
+    }
+
+    .results-header {
+      padding: 1.5rem 2rem;
+      background: linear-gradient(135deg, var(--gray-50) 0%, var(--gray-100) 100%);
+      border-bottom: 1px solid var(--gray-200);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .results-count {
+      background: var(--primary-100);
+      color: var(--primary-700);
+      padding: 0.5rem 1rem;
+      border-radius: 2rem;
+      font-weight: 600;
+      font-size: 0.875rem;
+    }
+
+    .table-container {
+      max-height: 400px;
+      overflow-y: auto;
+    }
+
+    .results-table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    .results-table th {
+      background: var(--gray-50);
+      padding: 1rem 1.5rem;
+      text-align: left;
+      font-weight: 600;
+      color: var(--gray-700);
+      font-size: 0.875rem;
+      letter-spacing: 0.025em;
+      border-bottom: 1px solid var(--gray-200);
+      position: sticky;
+      top: 0;
+    }
+
+    .results-table td {
+      padding: 1rem 1.5rem;
+      border-bottom: 1px solid var(--gray-100);
+      font-size: 0.875rem;
+    }
+
+    .results-table tr:hover {
+      background: var(--gray-50);
+    }
+
+    .profile-link {
+      color: var(--primary-600);
+      text-decoration: none;
+      font-weight: 500;
+      word-break: break-all;
+      transition: var(--transition);
+    }
+
+    .profile-link:hover {
+      color: var(--primary-700);
+      text-decoration: underline;
+    }
+
+    /* Empty State */
+    .empty-state {
+      text-align: center;
+      padding: 3rem 2rem;
+      color: var(--gray-500);
+    }
+
+    .empty-state-icon {
+      width: 4rem;
+      height: 4rem;
+      margin: 0 auto 1rem;
+      color: var(--gray-300);
+    }
+
+    /* Loading Spinner */
+    .spinner {
+      width: 2rem;
+      height: 2rem;
+      border: 3px solid var(--gray-200);
+      border-top: 3px solid var(--primary-600);
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+
+    /* Animations */
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    @keyframes slideIn {
+      from {
+        opacity: 0;
+        transform: translateY(-10px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    /* Responsive Design */
+    @media (max-width: 768px) {
+      .container {
+        padding: 1rem;
+      }
+
+      .header-content {
+        padding: 0 1rem;
+      }
+
+      .instructions {
+        padding: 1.5rem;
+      }
+
+      .section-content {
+        padding: 1.5rem;
+      }
+
+      .results-header {
+        padding: 1rem 1.5rem;
+        flex-direction: column;
+        gap: 1rem;
+        align-items: stretch;
+      }
+
+      .results-table th,
+      .results-table td {
+        padding: 0.75rem 1rem;
+      }
+    }
+
+    /* Focus Styles for Accessibility */
+    .btn:focus,
+    .form-input:focus,
+    .file-upload:focus-within {
+      outline: 2px solid var(--primary-600);
+      outline-offset: 2px;
+    }
+
+    /* High Contrast Mode Support */
+    @media (prefers-contrast: high) {
+      :root {
+        --gray-100: #e0e0e0;
+        --gray-200: #c0c0c0;
+        --gray-300: #a0a0a0;
+      }
+    }
+
+    /* Reduced Motion Support */
+    @media (prefers-reduced-motion: reduce) {
+      * {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+      }
+    }
+  </style>
+</head>
+<body>
+  <!-- Header -->
+  <header class="header" role="banner">
+    <div class="header-content">
+      <!-- <div class="logo-icon" aria-hidden="true">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z"/>
+          <rect width="4" height="12" x="2" y="9"/>
+          <circle cx="4" cy="4" r="2"/>
+        </svg>
+      </div> -->
+      <h1>LinkedIn Profile Scraper</h1>
+    </div>
+  </header>
+
+  <!-- Main Content -->
+  <main class="container" role="main">
+    <!-- Instructions Section -->
+    <section class="instructions" aria-labelledby="instructions-title">
+      <h2 id="instructions-title">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+          <circle cx="12" cy="12" r="10"/>
+          <path d="M12 6v6l4 2"/>
+        </svg>
+        How to Use This Tool
+      </h2>
+      <ol class="step-list">
+        <li class="step-item">
+          <span class="step-number" aria-hidden="true">1</span>
+          <div class="step-content">Search for LinkedIn profiles using the form below and download the CSV of profile URLs</div>
+        </li>
+        <li class="step-item">
+          <span class="step-number" aria-hidden="true">2</span>
+          <div class="step-content">Upload the downloaded CSV file to extract detailed profile information</div>
+        </li>
+        <li class="step-item">
+          <span class="step-number" aria-hidden="true">3</span>
+          <div class="step-content">Download the processed data with complete profile details</div>
+        </li>
+      </ol>
+    </section>
+
+    <!-- Main Grid -->
+    <div class="main-grid">
+      <!-- Search Section -->
+      <section class="section" aria-labelledby="search-title">
+        <div class="section-header">
+          <h2 class="section-title" id="search-title">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+              <circle cx="11" cy="11" r="8"/>
+              <path d="m21 21-4.35-4.35"/>
+            </svg>
+            Search Parameters
+          </h2>
+        </div>
+        <div class="section-content">
+          <form id="scrapeForm" class="form-grid" novalidate>
+            <div class="form-row">
+              <div class="form-group">
+                <label for="searchTerm" class="form-label">Search Term *</label>
+                <input 
+                  type="text" 
+                  id="searchTerm" 
+                  name="searchTerm"
+                  class="form-input" 
+                  placeholder="e.g. Software Engineer"
+                  required
+                  aria-describedby="searchTerm-help"
+                >
+                <small id="searchTerm-help" class="sr-only">Enter the job title or keyword to search for</small>
+              </div>
+              <div class="form-group">
+                <label for="countryCode" class="form-label">Country Code *</label>
+                <input 
+                  type="text" 
+                  id="countryCode" 
+                  name="countryCode"
+                  class="form-input" 
+                  placeholder="e.g. us"
+                  required
+                  aria-describedby="countryCode-help"
+                >
+                <small id="countryCode-help" class="sr-only">Enter the two-letter country code</small>
+              </div>
+            </div>
+            
+            <div class="form-row">
+              <div class="form-group">
+                <label for="pageNumber" class="form-label">Page Number</label>
+                <input 
+                  type="number" 
+                  id="pageNumber" 
+                  name="pageNumber"
+                  class="form-input" 
+                  value="1"
+                  min="1"
+                  aria-describedby="pageNumber-help"
+                >
+                <small id="pageNumber-help" class="sr-only">Specify which page of results to fetch</small>
+              </div>
+              <div class="form-group">
+                <label for="yearsOfExperience" class="form-label">Years of Experience</label>
+                <input 
+                  type="number" 
+                  id="yearsOfExperience" 
+                  name="yearsOfExperience"
+                  class="form-input" 
+                  min="0"
+                  placeholder="e.g. 5"
+                  aria-describedby="experience-help"
+                >
+                <small id="experience-help" class="sr-only">Filter by minimum years of experience</small>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label for="region" class="form-label">Region</label>
+              <input 
+                type="text" 
+                id="region" 
+                name="region"
+                class="form-input" 
+                placeholder="e.g. San Francisco, Bay Area"
+                aria-describedby="region-help"
+              >
+              <small id="region-help" class="sr-only">Specify geographic region for the search</small>
+            </div>
+
+            <button type="submit" id="scrapeBtn" class="btn btn-primary btn-full" aria-describedby="search-status">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                <circle cx="11" cy="11" r="8"/>
+                <path d="m21 21-4.35-4.35"/>
+              </svg>
+              <span id="search-btn-text">Start Scraping</span>
+            </button>
+          </form>
+        </div>
+      </section>
+
+      <!-- CSV Upload Section -->
+      <section class="section" aria-labelledby="upload-title">
+        <div class="section-header">
+          <h2 class="section-title" id="upload-title">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+              <polyline points="17,8 12,3 7,8"/>
+              <line x1="12" x2="12" y1="3" y2="15"/>
+            </svg>
+            Upload CSV for Profile Details
+          </h2>
+        </div>
+        <div class="section-content">
+          <div class="form-grid">
+            <div class="form-group">
+              <label for="csvFile" class="form-label">Upload CSV File</label>
+              <label for="csvFile" class="file-upload">
+                <input type="file" id="csvFileInput" accept=".csv" aria-describedby="csv-help">
+                <div class="file-upload-content">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                    <polyline points="7,10 12,15 17,10"/>
+                    <line x1="12" x2="12" y1="15" y2="3"/>
+                  </svg>
+                  <span>Click to select CSV file</span>
+                  <small>or drag and drop</small>
+                </div>
+              </label>
+              <small id="csv-help" class="sr-only">Select a CSV file containing LinkedIn profile URLs</small>
+            </div>
+
+            <button type="button" id="uploadCsvBtn" class="btn btn-success btn-full" aria-describedby="upload-status">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                <polyline points="17,8 12,3 7,8"/>
+                <line x1="12" x2="12" y1="3" y2="15"/>
+              </svg>
+              <span id="upload-btn-text">Upload & Process CSV</span>
+            </button>
+          </div>
+
+          <!-- CSV Status -->
+          <div id="csvStatusContainer" role="status" aria-live="polite"></div>
+        </div>
+      </section>
+    </div>
+
+    <!-- Search Status -->
+    <div id="statusContainer" role="status" aria-live="polite"></div>
+
+    <!-- Results Section -->
+    <div id="output"></div>
+    <button id="downloadCsvBtn" style="display:none;margin-top:18px;width:100%;background:#43a047;color:#fff;font-weight:600;border:none;border-radius:8px;padding:0.8rem 0;cursor:pointer;transition:background 0.2s;">⬇️ Download CSV</button>
+
+    <!-- Processed Data Section -->
+    <div id="csvOutput"></div>
+    <button id="downloadProcessedCsvBtn" style="display:none;margin-top:18px;width:100%;background:#0a66c2;color:#fff;font-weight:600;border:none;border-radius:8px;padding:0.8rem 0;cursor:pointer;transition:background 0.2s;">⬇️ Download Processed CSV</button>
+  </main>
+
+  <script>
+    // Global variables
+    let lastProfiles = [];
+    let processedCsvData = null;
+
+    // Utility functions
+    function showStatus(container, type, message) {
+      const statusDiv = document.createElement('div');
+      statusDiv.className = `status-message status-${type}`;
+      
+      const icon = type === 'success' ? 
+        '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20,6 9,17 4,12"/></svg>' :
+        type === 'error' ?
+        '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="15" x2="9" y1="9" y2="15"/><line x1="9" x2="15" y1="9" y2="15"/></svg>' :
+        '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>';
+      
+      statusDiv.innerHTML = `${icon}<span>${message}</span>`;
+      container.innerHTML = '';
+      container.appendChild(statusDiv);
+    }
+
+    function showSpinner(button, text) {
+      const spinner = '<div class="spinner"></div>';
+      button.innerHTML = `${spinner}<span>${text}</span>`;
+      button.disabled = true;
+    }
+
+    function hideSpinner(button, text, icon) {
+      button.innerHTML = `${icon}<span>${text}</span>`;
+      button.disabled = false;
+    }
+
+    function prioritizeProfiles(profiles, searchTerm) {
+      if (!searchTerm) return profiles;
+      const term = searchTerm.trim().toLowerCase();
+      return profiles.slice().sort((a, b) => {
+        const urlA = typeof a === 'string' ? a : (a.profileUrl || '');
+        const urlB = typeof b === 'string' ? b : (b.profileUrl || '');
+        const aMatch = urlA.toLowerCase().includes(term) ? 1 : 0;
+        const bMatch = urlB.toLowerCase().includes(term) ? 1 : 0;
+        return bMatch - aMatch;
+      });
+    }
+
+    function downloadCSV(profiles) {
+      if (!profiles || profiles.length === 0) return;
+      let csv = "SNo,ProfileURL\n";
+      profiles.forEach((profile, idx) => {
+        const url = typeof profile === 'string' ? profile : (profile.profileUrl || '');
+        csv += `"${idx + 1}","${url.replace(/"/g, '""')}"\n`;
+      });
+      const blob = new Blob([csv], { type: 'text/csv' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'linkedin_profiles.csv';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }
+
+    function renderProfilesTable(profiles, searchTerm) {
+      lastProfiles = profiles;
+      profiles = prioritizeProfiles(profiles, searchTerm);
+      
+      if (!Array.isArray(profiles) || profiles.length === 0) {
+        document.getElementById('downloadCsvBtn').style.display = "none";
+        return `
+          <div class="results-container">
+            <div class="empty-state">
+              <svg class="empty-state-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="10"/>
+                <line x1="12" x2="12" y1="8" y2="12"/>
+                <line x1="12" x2="12.01" y1="16" y2="16"/>
+              </svg>
+              <p>No profiles found. Try adjusting your search parameters.</p>
+            </div>
+          </div>
+        `;
+      }
+
+      document.getElementById('downloadCsvBtn').style.display = "block";
+      const count = profiles.length;
+      return `
+        <div class="results-container">
+          <div class="results-header">
+            <h3>Search Results</h3>
+            <span class="results-count">${count} Profile${count !== 1 ? 's' : ''} Found</span>
+          </div>
+          <div class="table-container">
+            <table class="results-table">
+              <thead>
+                <tr>
+                  <th style="width: 80px;">#</th>
+                  <th>Profile URL</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${profiles.map((profile, idx) => {
+                  const url = typeof profile === 'string' ? profile : (profile.profileUrl || '');
+                  return `
+                    <tr>
+                      <td>${idx + 1}</td>
+                      <td><a class="profile-link" href="${url}" target="_blank" rel="noopener noreferrer">${url}</a></td>
+                    </tr>
+                  `;
+                }).join('')}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      `;
+    }
+
+    function renderProcessedCsvTable(data) {
+      if (!Array.isArray(data) || !data.length) {
+        return `<div class="empty-state"><p>No processed data found.</p></div>`;
+      }
+      let html = `<table class="results-table"><thead><tr>`;
+      Object.keys(data[0]).forEach(key => {
+        html += `<th>${key}</th>`;
+      });
+      html += `</tr></thead><tbody>`;
+      data.forEach(row => {
+        html += `<tr>`;
+        Object.values(row).forEach(val => {
+          html += `<td>${val ?? ''}</td>`;
+        });
+        html += `</tr>`;
+      });
+      html += `</tbody></table>`;
+      return html;
+    }
+
+    // Event Listeners
+    document.getElementById('downloadCsvBtn').onclick = function() {
+      downloadCSV(lastProfiles);
+    };
+
+    document.getElementById('scrapeForm').onsubmit = async function(e) {
+      e.preventDefault();
+      
+      const statusContainer = document.getElementById('statusContainer');
+      const outputContainer = document.getElementById('output');
+      const scrapeBtn = document.getElementById('scrapeBtn');
+      
+      // Clear previous results
+      statusContainer.innerHTML = '';
+      outputContainer.innerHTML = '';
+      document.getElementById('downloadCsvBtn').style.display = "none";
+      
+      // Show loading state
+      showSpinner(scrapeBtn, 'Searching...');
+      
+      const params = {
+        searchTerm: document.getElementById('searchTerm').value,
+        countryCode: document.getElementById('countryCode').value,
+        pageNumber: document.getElementById('pageNumber').value,
+        yearsOfExperience: document.getElementById('yearsOfExperience').value,
+        region: document.getElementById('region').value
+      };
+      
+      try {
+        // Submit scraping request
+        await fetch('/run', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(params)
+        });
+        
+        // Fetch the results
+        const res = await fetch('/profiles');
+        const profiles = await res.json();
+        
+        showStatus(statusContainer, 'success', `✅ Profiles fetched successfully!`);
+        outputContainer.innerHTML = renderProfilesTable(profiles, params.searchTerm);
+        
+      } catch (error) {
+        showStatus(statusContainer, 'error', '❌ Error: Failed to fetch profiles. Please try again.');
+        outputContainer.innerHTML = renderProfilesTable([]);
+      } finally {
+        hideSpinner(scrapeBtn, 'Start Scraping', '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>');
+      }
+    };
+
+    document.getElementById('uploadCsvBtn').onclick = async function() {
+      const fileInput = document.getElementById('csvFileInput');
+      const statusContainer = document.getElementById('csvStatusContainer');
+      const outputContainer = document.getElementById('csvOutput');
+      const uploadBtn = document.getElementById('uploadCsvBtn');
+      
+      // Clear previous results
+      statusContainer.innerHTML = '';
+      outputContainer.innerHTML = '';
+      document.getElementById('downloadProcessedCsvBtn').style.display = "none";
+      
+      if (!fileInput.files.length) {
+        showStatus(statusContainer, 'error', '❌ Please select a CSV file to upload.');
+        return;
+      }
+      
+      const file = fileInput.files[0];
+      const formData = new FormData();
+      formData.append('csv', file);
+      formData.append('username', 'balajinavuluri678@gmail.com');
+      formData.append('password', '9908769232');
+      
+      // Show loading state
+      showSpinner(uploadBtn, 'Processing...');
+      showStatus(statusContainer, 'info', '⏳ Processing CSV, please wait...');
+      
+      try {
+        const res = await fetch('/scrape-csv', {
+          method: 'POST',
+          body: formData
+        });
+        
+        if (!res.ok) throw new Error(await res.text());
+        
+        const result = await res.json();
+        processedCsvData = result;
+        
+        showStatus(statusContainer, 'success', '✅ CSV processed successfully!');
+        outputContainer.innerHTML = renderProcessedCsvTable(processedCsvData);
+        document.getElementById('downloadProcessedCsvBtn').style.display = "block";
+        
+      } catch (error) {
+        showStatus(statusContainer, 'error', `❌ Error: ${error.message}`);
+      } finally {
+        hideSpinner(uploadBtn, 'Upload & Process CSV', '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17,8 12,3 7,8"/><line x1="12" x2="12" y1="3" y2="15"/></svg>');
+      }
+    };
+
+    document.getElementById('downloadProcessedCsvBtn').onclick = function() {
+      if (!processedCsvData || !processedCsvData.length) return;
+      let csv = Object.keys(processedCsvData[0]).join(',') + '\n';
+      processedCsvData.forEach(row => {
+        csv += Object.values(row).map(val => `"${(val ?? '').toString().replace(/"/g, '""')}"`).join(',') + '\n';
+      });
+      const blob = new Blob([csv], { type: 'text/csv' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'profile_details_processed.csv';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    };
+
+    // File input change handler
+    document.getElementById('csvFileInput').addEventListener('change', function(e) {
+      const file = e.target.files[0];
+      const uploadContent = e.target.parentElement.querySelector('.file-upload-content');
+      
+      if (file) {
+        uploadContent.innerHTML = `
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+            <polyline points="14,2 14,8 20,8"/>
+            <line x1="16" x2="8" y1="13" y2="13"/>
+            <line x1="16" x2="8" y1="17" y2="17"/>
+            <polyline points="10,9 9,9 8,9"/>
+          </svg>
+          <span>${file.name}</span>
+          <small>File selected</small>
+        `;
+      }
+    });
+
+    // Screen reader support
+    const srOnly = document.createElement('style');
+    srOnly.textContent = `
+      .sr-only {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        padding: 0;
+        margin: -1px;
+        overflow: hidden;
+        clip: rect(0, 0, 0, 0);
+        white-space: nowrap;
+        border: 0;
+      }
+    `;
+    document.head.appendChild(srOnly);
+
+    // ENV VAR POPUP CHECK
+    (async function checkEnvVars() {
+      try {
+        // Try to fetch /profiles, which will redirect to /env if env not set
+        const res = await fetch('/profiles', { redirect: 'manual' });
+        if (res.type === 'opaqueredirect' || (res.status >= 300 && res.status < 400)) {
+          showEnvPopup();
+        }
+      } catch (e) {
+        // Network error, ignore
+      }
+    })();
+
+    function showEnvPopup() {
+      const popup = document.createElement('div');
+      popup.innerHTML = `
+        <div style="
+          position:fixed;z-index:9999;inset:0;background:rgba(0,0,0,0.45);display:flex;align-items:center;justify-content:center;">
+          <div style="
+            background:#fff;max-width:420px;width:90%;border-radius:14px;box-shadow:0 8px 32px #0003;padding:2.5rem 2rem 2rem 2rem;display:flex;flex-direction:column;align-items:center;">
+            <h2 style="color:#2563eb;font-size:1.3rem;font-weight:700;margin-bottom:0.7em;text-align:center;">Setup Required</h2>
+            <div style="color:#374151;font-size:1.05rem;margin-bottom:1.2em;text-align:center;">
+              Please provide your API keys and LinkedIn credentials to use this application.<br>
+              <ul style="text-align:left;margin:1em 0 0 1.2em;padding:0;">
+                <li><b>GEMINI_API_KEY</b>: <a href="https://aistudio.google.com/app/apikey" target="_blank">Google AI Studio</a></li>
+                <li><b>SERPER_API_KEY</b>: <a href="https://serper.dev" target="_blank">serper.dev</a></li>
+                <li><b>LINKEDIN_USERNAME</b> & <b>LINKEDIN_PASSWORD</b>: Your LinkedIn login</li>
+              </ul>
+            </div>
+            <button id="envPopupBtn" style="background:#2563eb;color:#fff;font-weight:600;border:none;border-radius:8px;padding:0.8rem 0;width:100%;font-size:1rem;cursor:pointer;">
+              Enter Keys & Credentials
+            </button>
+          </div>
+        </div>
+      `;
+      document.body.appendChild(popup);
+      document.getElementById('envPopupBtn').onclick = function() {
+        window.location.href = '/env?redirect=1';
+      };
+      // Prevent interaction with background
+      document.body.style.overflow = 'hidden';
+    }
+  </script>
+</body>
+</html>
