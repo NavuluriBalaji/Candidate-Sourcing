@@ -665,6 +665,10 @@ if (envReady) {
     initializeGenAI();
 }
 
+app.get('/', (req, res) => {
+    res.redirect('/ui.html');
+});
+
 async function main() {
     try {
         const port = process.env.PORT || 3000;
