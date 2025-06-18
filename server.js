@@ -36,6 +36,7 @@ let LINKEDIN_PASSWORD = process.env.LINKEDIN_PASSWORD;
 let SERPER_API_KEY = process.env.SERPER_API_KEY;
 
 let envReady = !!(GEMINI_API_KEY && LINKEDIN_USERNAME && LINKEDIN_PASSWORD && SERPER_API_KEY);
+const CHROME_PATH = process.env.PUPPETEER_EXECUTABLE_PATH || '/usr/bin/chromium';
 
 app.get('/env', (req, res) => {
     res.send(`
